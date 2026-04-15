@@ -12,6 +12,7 @@
 #include "target.h"
 
 #include <flash_map_backend/flash_map_backend.h>
+#include <zephyr/devicetree/partitions.h>
 #include <sysflash/sysflash.h>
 
 #include "bootutil/boot_hooks.h"
@@ -20,7 +21,32 @@
 
 BOOT_LOG_MODULE_DECLARE(mcuboot);
 
-#if (!defined(CONFIG_XTENSA) && DT_HAS_CHOSEN(zephyr_flash_controller))
+#if defined(CONFIG_STM32_MEMMAP)
+/* MEMORY MAPPED for XiP on external NOR flash takes the sspi-nor or ospi-nor or qspi-nor device */
+#define FLASH_DEVICE_ID SPI_FLASH_0_ID
+#if DT_NODE_HAS_STATUS(DT_INST(0, st_stm32_xspi_nor), okay)
+#define DT_DRV_COMPAT st_stm32_xspi_nor
+#define FLASH_DEVICE_NODE DT_INST(0, st_stm32_xspi_nor)
+#define FLASH_DEVICE_BASE DT_REG_ADDR_BY_IDX(DT_INST_PARENT(0), 1)
+#elif DT_NODE_HAS_STATUS(DT_INST(0, st_stm32_ospi_nor), okay)
+#define DT_DRV_COMPAT st_stm32_ospi_nor
+#define FLASH_DEVICE_NODE DT_INST(0, st_stm32_ospi_nor)
+#define FLASH_DEVICE_BASE DT_REG_ADDR_BY_IDX(DT_INST_PARENT(0), 1)
+#elif DT_NODE_HAS_STATUS(DT_INST(0, st_stm32_qspi_nor), okay)
+#define DT_DRV_COMPAT st_stm32_qspi_nor
+#define FLASH_DEVICE_NODE DT_INST(0, st_stm32_qspi_nor)
+#define FLASH_DEVICE_BASE DT_REG_ADDR_BY_IDX(DT_INST_PARENT(0), 1)
+#else
+#error "FLASH_DEVICE_NODE could not be determined"
+#endif
+
+#elif (DT_NODE_HAS_COMPAT(DT_PARENT(DT_CHOSEN(zephyr_flash_controller)),       \
+			  nxp_imx_flexspi))
+#define FLASH_DEVICE_ID SPI_FLASH_0_ID
+#define FLASH_DEVICE_NODE DT_CHOSEN(zephyr_flash_controller)
+#define FLASH_DEVICE_BASE DT_REG_ADDR_BY_IDX(DT_PARENT(FLASH_DEVICE_NODE), 1)
+
+#elif (!defined(CONFIG_XTENSA) && DT_HAS_CHOSEN(zephyr_flash_controller))
 #define FLASH_DEVICE_ID SOC_FLASH_0_ID
 #define FLASH_DEVICE_BASE CONFIG_FLASH_BASE_ADDRESS
 #define FLASH_DEVICE_NODE DT_CHOSEN(zephyr_flash_controller)
@@ -36,9 +62,9 @@ BOOT_LOG_MODULE_DECLARE(mcuboot);
 #define FLASH_DEVICE_BASE 0
 #define FLASH_DEVICE_NODE DT_CHOSEN(zephyr_flash_controller)
 
-#elif (defined(CONFIG_SOC_SERIES_NRF54HX) && DT_HAS_CHOSEN(zephyr_flash))
+#elif (defined(CONFIG_SOC_SERIES_NRF54H) && DT_HAS_CHOSEN(zephyr_flash))
 
-#define FLASH_DEVICE_ID SPI_FLASH_0_ID
+#define FLASH_DEVICE_ID SOC_FLASH_0_ID
 #define FLASH_DEVICE_BASE CONFIG_FLASH_BASE_ADDRESS
 #define FLASH_DEVICE_NODE DT_CHOSEN(zephyr_flash)
 
@@ -111,26 +137,26 @@ int flash_area_id_from_direct_image(int image_id)
     switch (image_id) {
     case 0:
     case 1:
-        return FIXED_PARTITION_ID(slot0_partition);
-#if FIXED_PARTITION_EXISTS(slot1_partition)
+        return PARTITION_ID(slot0_partition);
+#if PARTITION_EXISTS(slot1_partition)
     case 2:
-        return FIXED_PARTITION_ID(slot1_partition);
+        return PARTITION_ID(slot1_partition);
 #endif
-#if FIXED_PARTITION_EXISTS(slot2_partition)
+#if PARTITION_EXISTS(slot2_partition)
     case 3:
-        return FIXED_PARTITION_ID(slot2_partition);
+        return PARTITION_ID(slot2_partition);
 #endif
-#if FIXED_PARTITION_EXISTS(slot3_partition)
+#if PARTITION_EXISTS(slot3_partition)
     case 4:
-        return FIXED_PARTITION_ID(slot3_partition);
+        return PARTITION_ID(slot3_partition);
 #endif
-#if FIXED_PARTITION_EXISTS(slot4_partition)
+#if PARTITION_EXISTS(slot4_partition)
     case 5:
-        return FIXED_PARTITION_ID(slot4_partition);
+        return PARTITION_ID(slot4_partition);
 #endif
-#if FIXED_PARTITION_EXISTS(slot5_partition)
+#if PARTITION_EXISTS(slot5_partition)
     case 6:
-        return FIXED_PARTITION_ID(slot5_partition);
+        return PARTITION_ID(slot5_partition);
 #endif
     }
     return -EINVAL;
