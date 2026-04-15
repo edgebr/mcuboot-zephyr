@@ -12,7 +12,7 @@
 #include "target.h"
 
 #include <flash_map_backend/flash_map_backend.h>
-#include <zephyr/devicetree/partitions.h>
+#include <zephyr/devicetree/fixed-partitions.h>
 #include <sysflash/sysflash.h>
 
 #include "bootutil/boot_hooks.h"
